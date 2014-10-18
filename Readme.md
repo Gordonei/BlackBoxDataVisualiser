@@ -22,7 +22,6 @@ Or
 * Import as a Python module i.e. `import BlackBoxDataVisualiser` or e.g.
 
 ```python
-import sys
 import BlackBoxDataVisualiser
 
 filename = "path/to/your/file"
