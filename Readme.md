@@ -14,8 +14,12 @@ Please install the most recent verions of:
 ##Installation
 One of these alternatives:
 
-* Run `python setup.py install` to install it for your Python distribution.
+* Run `python setup.py install` in the unpacked directory to install it.
 * Add the path to this module to your `PYTHONPATH` environmental variable, i.e. `export PYTHONPATH=$PYTHONPATH:$(pwd)` if you're in the directory that contains the module
 
 ##Usage
-* Simply run `BlackBoxDataVisualiser (data file 1) (data file 2) ... (data file n)`
+* Simply run `BlackBoxDataVisualiser (data file 1) (data file 2) ... (data file n)` from the command line
+
+Or
+
+* It may be imported as a Python module i.e. `import BlackBoxDataVisualiser`
