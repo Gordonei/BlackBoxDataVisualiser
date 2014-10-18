@@ -6,7 +6,7 @@ October, 2014
 This is a simple Python script/module for visualing data that has been produced in a flat format i.e. multiple files containing MxN matrix where the N columns are the features that you're interested in, and the M rows represent instances of these features. The file itself represents a grouping of these instances.
 
 ##Prequistes
-Please install the most recent verions of:
+Please install the most recent versions of:
 
 * [Numpy](http://www.numpy.org/)
 * [Matplotlib](http://matplotlib.org/)
@@ -19,4 +19,14 @@ Please install the most recent verions of:
 
 Or
 
-* Import as a Python module i.e. `import BlackBoxDataVisualiser`
+* Import as a Python module i.e. `import BlackBoxDataVisualiser` or e.g.
+
+```python
+import sys
+import BlackBoxDataVisualiser
+
+filename = "path/to/your/file"
+data_dict = Read(filename)
+
+Plot(data_dict)
+```
