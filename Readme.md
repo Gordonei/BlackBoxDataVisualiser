@@ -19,20 +19,3 @@ One of these alternatives:
 
 ##Usage
 * Simply run `BlackBoxDataVisualiser (data file 1) (data file 2) ... (data file n)`
-
-* The contents of this script, if you're interested
-
-```python
-#!/usr/bin/env python
-import BlackBoxDataVisualiser.Reader, BlackBoxDataVisualiser.Plotter
-import sys
-
-if(len(sys.argv)>1):
-    data = []
-    for filename in sys.argv[1:]: data.append(BlackBoxDataVisualiser.Reader.Read(filename))
-    
-    BlackBoxDataVisualiser.Plotter.Plot(data)
-
-else:
-    print "usage: ./BlackBoxDataVisualiser.py (data file 1) (data file 2) ... (data file 3)"
-```
