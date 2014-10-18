@@ -12,14 +12,11 @@ Please install the most recent verions of:
 * [Matplotlib](http://matplotlib.org/)
 
 ##Installation
-One of these alternatives:
-
-* Run `python setup.py install` in the unpacked directory to install it.
-* Add the path to this module to your `PYTHONPATH` environmental variable, i.e. `export PYTHONPATH=$PYTHONPATH:$(pwd)` if you're in the directory that contains the module
+* Run `python setup.py install` in the unpacked directory to install it
 
 ##Usage
 * Simply run `BlackBoxDataVisualiser (data file 1) (data file 2) ... (data file n)` from the command line
 
 Or
 
-* It may be imported as a Python module i.e. `import BlackBoxDataVisualiser`
+* Import as a Python module i.e. `import BlackBoxDataVisualiser`
