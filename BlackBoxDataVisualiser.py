@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import numpy, matplotlib.pyplot as plt
-from matplotlib.widgets import RadioButtons
+from matplotlib.widgets import Slider,RadioButtons
 
 def headerSnoop(raw_data,col_separator):
     """
@@ -67,7 +67,42 @@ def drawViewFigure(viewer_fig,data_dicts,x_label,y_label):
         data = dd["data"]
         if(x_label in data.dtype.names and y_label in data.dtype.names): viewer_ax.plot(data[x_label],data[y_label],label=title) #rather than replotting every time, maybe just change the data ranges?
         
+    for ax in viewer_fig.axes:
+        ax.set_xlabel(x_label)    
+        ax.set_ylabel(y_label)
+    
     viewer_fig.canvas.draw()
+    
+def drawAxesControls(controls_fig,viewer_fig,columns):
+    axcolor = 'w'
+    char_width = max(map(lambda x:len(x),columns)) #finding the widest column title
+    
+    #X offset, y offset, x length, y length
+    rax = plt.axes([0.05, 0.1 + 0.03*len(columns) + 0.1, 0.02*char_width, 0.03*len(columns)], axisbg=axcolor,title="X Axis")  
+    radio = RadioButtons(rax, tuple(columns))
+    
+    def x_axesChange(label):
+        global x_label,y_label #Should probably do this in a more OOP way
+        x_label = label
+        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
+        
+    radio.on_clicked(x_axesChange)
+    
+    rax = plt.axes([0.05, 0.1, 0.02*char_width, 0.03*len(columns)], axisbg=axcolor,title="Y Axis")
+    radio2 = RadioButtons(rax, tuple(columns))
+    
+    def y_axesChange(label):
+        global x_label,y_label
+        y_label = label
+        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
+        
+    radio2.on_clicked(y_axesChange)
+    
+    return [radio,radio2]
+
+#Global variables used during plotting
+x_label = 0
+y_label = 1
     
 def Plot(data_dicts):
     """
@@ -76,8 +111,7 @@ def Plot(data_dicts):
     viewer_fig = plt.figure()
     viewer_ax = viewer_fig.add_subplot(111)
     
-    x_label = 0
-    y_label = 1
+    global x_label,y_label
     
     #Finding the column names
     columns = []
@@ -89,28 +123,14 @@ def Plot(data_dicts):
     x_label = columns[x_label] #default with 1st and 2nd column
     y_label = columns[y_label]
     
-    
+    #Draw viewer for the 1st time
     drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
      
+    #Creating the controls
     controls_fig = plt.figure()
-    axcolor = 'w'
-    rax = plt.axes([0.05, 0.7, 0.15, 0.15], axisbg=axcolor)  
-    radio = RadioButtons(rax, tuple(columns))
     
-    def x_axesChange(label):
-        x_label = label
-        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
-        
-    radio.on_clicked(x_axesChange)
-    
-    rax = plt.axes([0.05, 0.4, 0.15, 0.15], axisbg=axcolor)
-    radio2 = RadioButtons(rax, tuple(columns))
-    
-    def y_axesChange(label):
-        y_label = label
-        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
-        
-    radio2.on_clicked(y_axesChange)
+    #Drawing the radio buttons that control the X and Y Axes
+    radio_buttons = drawAxesControls(controls_fig,viewer_fig,columns)
     
     plt.show()
 
