@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-import numpy, matplotlib.pyplot as plt
+import numpy, matplotlib, matplotlib.pyplot as plt
 from matplotlib.widgets import Slider,RadioButtons
 
 def headerSnoop(raw_data,col_separator):
@@ -55,25 +55,57 @@ def Read(filename,strip_whitespace=True,row_separator='\n',col_separator=',',hea
     
     return {"title":title,"data":data}
 
-def drawViewFigure(viewer_fig,data_dicts,x_label,y_label):
+def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.lines.Line2D):
     """
-    Helper function for redrawing the view window for the x and y labels.
+    Helper function for drawing the view window for the x and y labels initially
     """
-    viewer_fig.clear()
+    #viewer_fig.clear()
+    plt.figure(viewer_fig.number)
     viewer_ax = viewer_fig.add_subplot(111)
     
     for dd in data_dicts:
         title = dd["title"]
         data = dd["data"]
-        if(x_label in data.dtype.names and y_label in data.dtype.names): viewer_ax.plot(data[x_label],data[y_label],label=title) #rather than replotting every time, maybe just change the data ranges?
+        if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D): viewer_ax.plot(data[x_label],data[y_label],label=title)
+        elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection): viewer_ax.scatter(data[x_label],data[y_label],label=title)
         
-    for ax in viewer_fig.axes:
-        ax.set_xlabel(x_label)    
-        ax.set_ylabel(y_label)
+    viewer_ax.set_xlabel(x_label)    
+    viewer_ax.set_ylabel(y_label)
+    
+    viewer_fig.canvas.draw()
+
+def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.lines.Line2D):
+    """
+    Helper function for redrawing the view window for the x and y labels.
+    """
+    plt.figure(viewer_fig.number)
+    viewer_ax = plt.gca()
+    
+    count = 0
+    for vac in viewer_ax.get_children():
+        if(isinstance(vac,plot_type)):
+            title = data_dicts[count]["title"]
+            data = data_dicts[count]["data"]
+            if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D):
+                vac.set_xdata(data[x_label])
+                vac.set_ydata(data[y_label])
+            elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection): vac.set_offsets([data[x_label],data[y_label]])
+                
+            count += 1
+        
+    #for ax in viewer_fig.axes:
+    viewer_ax.set_xlabel(x_label)    
+    viewer_ax.set_ylabel(y_label)
+    
+    #viewer_ax.relim()
+    #viewer_ax.autoscale_view(True,True,True)
     
     viewer_fig.canvas.draw()
     
 def drawAxesControls(controls_fig,viewer_fig,columns):
+    """
+    Helper function for redrawing the control view window
+    """
     axcolor = 'w'
     char_width = max(map(lambda x:len(x),columns)) #finding the widest column title
     
@@ -84,7 +116,7 @@ def drawAxesControls(controls_fig,viewer_fig,columns):
     def x_axesChange(label):
         global x_label,y_label #Should probably do this in a more OOP way
         x_label = label
-        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
+        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
         
     radio.on_clicked(x_axesChange)
     
@@ -94,7 +126,7 @@ def drawAxesControls(controls_fig,viewer_fig,columns):
     def y_axesChange(label):
         global x_label,y_label
         y_label = label
-        drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
+        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
         
     radio2.on_clicked(y_axesChange)
     
@@ -109,7 +141,6 @@ def Plot(data_dicts):
     High level function for plotting the data returned from the Read function
     """
     viewer_fig = plt.figure()
-    viewer_ax = viewer_fig.add_subplot(111)
     
     global x_label,y_label
     
@@ -124,7 +155,7 @@ def Plot(data_dicts):
     y_label = columns[y_label]
     
     #Draw viewer for the 1st time
-    drawViewFigure(viewer_fig,data_dicts,x_label,y_label)
+    drawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
      
     #Creating the controls
     controls_fig = plt.figure()
