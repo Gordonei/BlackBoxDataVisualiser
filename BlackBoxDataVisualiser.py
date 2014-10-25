@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import sys
+import sys,copy
 import numpy, matplotlib, matplotlib.pyplot as plt
-from matplotlib.widgets import Slider,RadioButtons
+from matplotlib.widgets import Slider,RadioButtons,CheckButtons
 
 def headerSnoop(raw_data,col_separator):
     """
@@ -29,11 +29,14 @@ def Read(filename,strip_whitespace=True,row_separator='\n',col_separator=',',hea
     if(strip_whitespace): raw_data = filter(None,raw_data)
     
     #Title is first line, Column Headers are the last line of the header
-    title = raw_data[title_row].strip(col_separator)
+    title_row = 0
     
     #If header rows aren't specified, use the snooper helper function to try 
-    if not(header_rows): header_rows = headerSnoop(raw_data,col_separator)
+    if not(header_rows):
+        header_rows = headerSnoop(raw_data,col_separator)
+        title_row = header_rows-2
     
+    title = raw_data[title_row].strip(col_separator)
     headers = raw_data[header_rows-1].split(col_separator)
     
     #Turning data in numpy array
@@ -55,7 +58,7 @@ def Read(filename,strip_whitespace=True,row_separator='\n',col_separator=',',hea
     
     return {"title":title,"data":data}
 
-def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.lines.Line2D):
+def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection,plot_type=matplotlib.lines.Line2D):
     """
     Helper function for drawing the view window for the x and y labels initially
     """
@@ -65,16 +68,19 @@ def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.li
     
     for dd in data_dicts:
         title = dd["title"]
-        data = dd["data"]
-        if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D): viewer_ax.plot(data[x_label],data[y_label],label=title)
+        data = numpy.copy(dd["data"])
+        for parameter in parameter_selection.keys(): data = data[data[parameter]==parameter_selection[parameter]]
+        
+        if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D): viewer_ax.plot(data[x_label],data[y_label],"-o",label=title)
         elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection): viewer_ax.scatter(data[x_label],data[y_label],label=title)
         
     viewer_ax.set_xlabel(x_label)    
     viewer_ax.set_ylabel(y_label)
     
     viewer_fig.canvas.draw()
+    plt.legend(loc='best')
 
-def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.lines.Line2D):
+def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection,plot_type=matplotlib.lines.Line2D):
     """
     Helper function for redrawing the view window for the x and y labels.
     """
@@ -85,7 +91,11 @@ def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.
     for vac in viewer_ax.get_children():
         if(isinstance(vac,plot_type)):
             title = data_dicts[count]["title"]
-            data = data_dicts[count]["data"]
+            data = numpy.copy(data_dicts[count]["data"])
+            for parameter in parameter_selection.keys():
+                #print parameter + " " + str(parameter_selection[parameter])
+                data = data[data[parameter]==parameter_selection[parameter]]
+            
             if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D):
                 vac.set_xdata(data[x_label])
                 vac.set_ydata(data[y_label])
@@ -97,44 +107,109 @@ def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.
     viewer_ax.set_xlabel(x_label)    
     viewer_ax.set_ylabel(y_label)
     
-    #viewer_ax.relim()
-    #viewer_ax.autoscale_view(True,True,True)
+    viewer_ax.relim() 
+    viewer_ax.autoscale_view(True,True,True)
     
     viewer_fig.canvas.draw()
     
 def drawAxesControls(controls_fig,viewer_fig,columns):
     """
-    Helper function for redrawing the control view window
+    Helper function for adding the buttons for controlling the axes to the control view window
     """
     axcolor = 'w'
     char_width = max(map(lambda x:len(x),columns)) #finding the widest column title
     
-    #X offset, y offset, x length, y length
-    rax = plt.axes([0.05, 0.1 + 0.03*len(columns) + 0.1, 0.02*char_width, 0.03*len(columns)], axisbg=axcolor,title="X Axis")  
+                    #X offset, y offset, x length, y length
+    rax = plt.axes([0.05, 0.1 + 0.03*len(columns) + 0.1, 0.015*char_width, 0.03*len(columns)], axisbg=axcolor,title="X Axis")  
     radio = RadioButtons(rax, tuple(columns))
     
     def x_axesChange(label):
-        global x_label,y_label #Should probably do this in a more OOP way
+        global x_label,y_label,parameter_selection #Should probably do this in a more OOP way
         x_label = label
-        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
+        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
         
     radio.on_clicked(x_axesChange)
     
-    rax = plt.axes([0.05, 0.1, 0.02*char_width, 0.03*len(columns)], axisbg=axcolor,title="Y Axis")
-    radio2 = RadioButtons(rax, tuple(columns))
+    rax2 = plt.axes([0.05, 0.1, 0.015*char_width, 0.03*len(columns)], axisbg=axcolor,title="Y Axis")
+    radio2 = RadioButtons(rax2, tuple(columns))
     
     def y_axesChange(label):
-        global x_label,y_label
+        global x_label,y_label,parameter_selection
         y_label = label
-        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
+        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
         
     radio2.on_clicked(y_axesChange)
     
     return [radio,radio2]
 
+def drawParameterListControls(control_fig,viewer_fig,columns,default_values):
+    """
+    Helper function for adding the check boxes for controlling the parameter list
+    """
+    axcolor = 'w'
+    char_width = max(map(lambda x:len(x),columns)) #finding the widest column title
+    
+    rax = plt.axes([0.05, 0.2 + 0.03*len(columns)*2 + 0.1, 0.015*char_width, 0.03*len(columns)], axisbg=axcolor,title="Parameter List")
+    check = CheckButtons(rax, tuple(columns), ([True]*len(columns)))
+    
+    def parameterlistChange(label):
+        global x_label,y_label,parameter_selection
+        if(label in parameter_selection.keys()): del parameter_selection[label]
+        else: parameter_selection[label] = default_values[columns.index(label)]
+        
+        redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
+    
+    check.on_clicked(parameterlistChange)
+    
+    return check
+
+#def findNearestIndex(columnName,columnData):
+    
+    #return ()
+
+def drawParameterControls(control_fig,viewer_fig,columns,default_values,min_values,max_values):
+    """
+    Helper function for adding the sliders for controlling the values of paramers
+    """
+    axcolor = 'w'
+    char_width = max(map(lambda x:len(x),columns)) #finding the widest column title
+    
+    saxes = []
+    sliders = {}
+    
+    #Generating the Sliders
+    for i,c in enumerate(columns):
+        saxes.append(plt.axes([0.05 + 0.015*char_width + 0.01*char_width + 0.05, (0.01 + 0.03)*i + 0.1, 0.02*char_width, 0.03], axisbg=axcolor))
+        sliders[c] = Slider(saxes[-1], c, min_values[i], max_values[i], valinit=default_values[i])
+        
+    #The callback function for the sliders
+    def parameterChange(value,column):
+        global x_label,y_label,parameter_selection
+    
+        #for c in enumerate(columns):
+        changed = False
+        if(column in parameter_selection.keys()):
+            if(parameter_selection[column]!=value):
+                for dd in data_dicts:
+                    nearest_value = dd["data"][column][numpy.argmin(numpy.abs(dd["data"][column]-value))]
+                    parameter_selection[column] = nearest_value
+                    sliders[column].set_val(nearest_value) #this is probably not the safest way to do this
+                    changed = True
+        
+        if(changed): redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
+       
+    #Creating and bind a unique function call for each slider
+    functions = []
+    for column in columns:
+        functions.append(lambda value,col=column: parameterChange(value,col))
+        sliders[column].on_changed(functions[-1])
+
+    return sliders
+
 #Global variables used during plotting
 x_label = 0
 y_label = 1
+parameter_selection = {}
     
 def Plot(data_dicts):
     """
@@ -142,26 +217,42 @@ def Plot(data_dicts):
     """
     viewer_fig = plt.figure()
     
-    global x_label,y_label
+    global x_label,y_label,parameter_selection
     
     #Finding the column names
     columns = []
+    default_values = []
+    min_values = []
+    max_values = []
     for dd in data_dicts:
         data = dd["data"]
         for datatype_name in data.dtype.names:
-            if(datatype_name not in columns): columns.append(datatype_name)
+            if(datatype_name not in columns):
+                columns.append(datatype_name)
+                default_values.append(data[datatype_name][0])
+                min_values.append(min(data[datatype_name]))
+                max_values.append(max(data[datatype_name]))
             
-    x_label = columns[x_label] #default with 1st and 2nd column
+    #Setting Default Values
+    x_label = columns[x_label]
     y_label = columns[y_label]
     
+    #Adding the other parameter types to the dictionary
+    for c in columns:
+        if(c is not x_label or c is not y_label): parameter_selection[c] = default_values[columns.index(c)]
+    
+    plot_type = matplotlib.collections.PathCollection
+    
     #Draw viewer for the 1st time
-    drawViewFigure(viewer_fig,data_dicts,x_label,y_label,plot_type=matplotlib.collections.PathCollection)
+    drawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
      
     #Creating the controls
     controls_fig = plt.figure()
     
     #Drawing the radio buttons that control the X and Y Axes
-    radio_buttons = drawAxesControls(controls_fig,viewer_fig,columns)
+    axes_radio_buttons = drawAxesControls(controls_fig,viewer_fig,columns)
+    parameter_list_checkboxes = drawParameterListControls(controls_fig,viewer_fig,columns,default_values)
+    parameter_sliders = drawParameterControls(controls_fig,viewer_fig,columns,default_values,min_values,max_values)
     
     plt.show()
 
