@@ -124,7 +124,7 @@ def drawAxesControls(controls_fig,viewer_fig,columns):
     radio = RadioButtons(rax, tuple(columns))
     
     def x_axesChange(label):
-        global x_label,y_label,parameter_selection #Should probably do this in a more OOP way
+        global x_label,y_label,parameter_selection,data_dicts #Should probably do this in a more OOP way
         x_label = label
         redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
         
@@ -134,7 +134,7 @@ def drawAxesControls(controls_fig,viewer_fig,columns):
     radio2 = RadioButtons(rax2, tuple(columns))
     
     def y_axesChange(label):
-        global x_label,y_label,parameter_selection
+        global x_label,y_label,parameter_selection,data_dicts
         y_label = label
         redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
         
@@ -153,7 +153,7 @@ def drawParameterListControls(control_fig,viewer_fig,columns,default_values):
     check = CheckButtons(rax, tuple(columns), ([True]*len(columns)))
     
     def parameterlistChange(label):
-        global x_label,y_label,parameter_selection
+        global x_label,y_label,parameter_selection,data_dicts
         if(label in parameter_selection.keys()): del parameter_selection[label]
         else: parameter_selection[label] = default_values[columns.index(label)]
         
@@ -162,10 +162,6 @@ def drawParameterListControls(control_fig,viewer_fig,columns,default_values):
     check.on_clicked(parameterlistChange)
     
     return check
-
-#def findNearestIndex(columnName,columnData):
-    
-    #return ()
 
 def drawParameterControls(control_fig,viewer_fig,columns,default_values,min_values,max_values):
     """
@@ -184,16 +180,15 @@ def drawParameterControls(control_fig,viewer_fig,columns,default_values,min_valu
         
     #The callback function for the sliders
     def parameterChange(value,column):
-        global x_label,y_label,parameter_selection
+        global x_label,y_label,parameter_selection,data_dicts
     
-        #for c in enumerate(columns):
         changed = False
         if(column in parameter_selection.keys()):
             if(parameter_selection[column]!=value):
                 for dd in data_dicts:
                     nearest_value = dd["data"][column][numpy.argmin(numpy.abs(dd["data"][column]-value))]
                     parameter_selection[column] = nearest_value
-                    sliders[column].set_val(nearest_value) #this is probably not the safest way to do this
+                    sliders[column].set_val(nearest_value)
                     changed = True
         
         if(changed): redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection)
@@ -210,14 +205,16 @@ def drawParameterControls(control_fig,viewer_fig,columns,default_values,min_valu
 x_label = 0
 y_label = 1
 parameter_selection = {}
+data_dicts = []
     
-def Plot(data_dicts):
+def Plot(dd):
     """
     High level function for plotting the data returned from the Read function
     """
     viewer_fig = plt.figure()
     
-    global x_label,y_label,parameter_selection
+    global x_label,y_label,parameter_selection,data_dicts
+    data_dicts = dd
     
     #Finding the column names
     columns = []
