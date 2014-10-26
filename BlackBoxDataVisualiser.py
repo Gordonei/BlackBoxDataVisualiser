@@ -28,10 +28,11 @@ def Read(filename,strip_whitespace=True,row_separator='\n',col_separator=',',hea
     raw_data = datafile.read().split(row_separator)
     if(strip_whitespace): raw_data = filter(None,raw_data)
     
-    #Title is first line, Column Headers are the last line of the header
+    #Assuming title is first line and column Headers are the last line of the header
     title_row = 0
+    header_row = header_rows-1
     
-    #If header rows aren't specified, use the snooper helper function to try 
+    #If header rows aren't specified, use the snooper helper function to try find them
     if not(header_rows):
         header_rows = headerSnoop(raw_data,col_separator)
         title_row = header_rows-2
@@ -58,56 +59,80 @@ def Read(filename,strip_whitespace=True,row_separator='\n',col_separator=',',hea
     
     return {"title":title,"data":data}
 
-def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection,plot_type=matplotlib.lines.Line2D):
+def drawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection,plot_type=matplotlib.lines.Line2D,colour_seed=1234):
     """
     Helper function for drawing the view window for the x and y labels initially
     """
     #viewer_fig.clear()
     plt.figure(viewer_fig.number)
     viewer_ax = viewer_fig.add_subplot(111)
-    
+
+    numpy.random.seed(colour_seed)
     for dd in data_dicts:
         title = dd["title"]
         data = numpy.copy(dd["data"])
         for parameter in parameter_selection.keys(): data = data[data[parameter]==parameter_selection[parameter]]
         
-        if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D): viewer_ax.plot(data[x_label],data[y_label],"-o",label=title)
-        elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection): viewer_ax.scatter(data[x_label],data[y_label],label=title)
+        colour_value = (numpy.random.random(),numpy.random.random(),numpy.random.random())
+        if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D):
+            viewer_ax.plot(data[x_label],data[y_label],"-o",label=title,color=colour_value)
+        elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection):
+            viewer_ax.scatter(data[x_label],data[y_label],label=title,color=colour_value)
         
     viewer_ax.set_xlabel(x_label)    
     viewer_ax.set_ylabel(y_label)
     
     viewer_fig.canvas.draw()
     plt.legend(loc='best')
+    
 
 def redrawViewFigure(viewer_fig,data_dicts,x_label,y_label,parameter_selection,plot_type=matplotlib.lines.Line2D):
     """
     Helper function for redrawing the view window for the x and y labels.
     """
+    global old_x_label,old_y_label
     plt.figure(viewer_fig.number)
     viewer_ax = plt.gca()
     
+    min_x = None
+    min_y = None
+    max_x = None
+    max_y = None
     count = 0
     for vac in viewer_ax.get_children():
         if(isinstance(vac,plot_type)):
             title = data_dicts[count]["title"]
             data = numpy.copy(data_dicts[count]["data"])
             for parameter in parameter_selection.keys():
-                #print parameter + " " + str(parameter_selection[parameter])
                 data = data[data[parameter]==parameter_selection[parameter]]
             
             if(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.lines.Line2D):
                 vac.set_xdata(data[x_label])
                 vac.set_ydata(data[y_label])
-            elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection): vac.set_offsets([data[x_label],data[y_label]])
+            elif(x_label in data.dtype.names and y_label in data.dtype.names and plot_type==matplotlib.collections.PathCollection):
+                vac.set_offsets([data[x_label],data[y_label]])
+                if(data.size>0):
+                    if(not min_x or min_x>min(data[x_label])): min_x = min(data[x_label])
+                    if(not max_x or max_x<max(data[x_label])): max_x = max(data[x_label])
+                    if(not min_y or min_y>min(data[y_label])): min_y = min(data[y_label])
+                    if(not max_y or max_y<max(data[y_label])): max_y = max(data[y_label])
+                
+            old_x_label = x_label
+            old_y_label = y_label
                 
             count += 1
         
-    #for ax in viewer_fig.axes:
     viewer_ax.set_xlabel(x_label)    
     viewer_ax.set_ylabel(y_label)
     
-    viewer_ax.relim() 
+    if(plot_type==matplotlib.lines.Line2D):
+        viewer_ax.relim()
+        viewer_ax.autoscale_view(True,True,True)
+        
+    elif(plot_type==matplotlib.collections.PathCollection):
+        viewer_ax.set_xlim(min_x,max_x)
+        viewer_ax.set_ylim(min_y,max_y)
+        
     viewer_ax.autoscale_view(True,True,True)
     
     viewer_fig.canvas.draw()
@@ -206,6 +231,9 @@ x_label = 0
 y_label = 1
 parameter_selection = {}
 data_dicts = []
+
+old_x_label = 0
+old_y_label = 0
     
 def Plot(dd):
     """
@@ -213,7 +241,7 @@ def Plot(dd):
     """
     viewer_fig = plt.figure()
     
-    global x_label,y_label,parameter_selection,data_dicts
+    global x_label,y_label,parameter_selection,data_dicts,old_x_label,old_y_label
     data_dicts = dd
     
     #Finding the column names
@@ -231,8 +259,11 @@ def Plot(dd):
                 max_values.append(max(data[datatype_name]))
             
     #Setting Default Values
-    x_label = columns[x_label]
-    y_label = columns[y_label]
+    x_label = columns[0]
+    y_label = columns[1]
+    
+    old_x_label = columns[0]
+    old_y_label = columns[1]
     
     #Adding the other parameter types to the dictionary
     for c in columns:
@@ -248,7 +279,11 @@ def Plot(dd):
     
     #Drawing the radio buttons that control the X and Y Axes
     axes_radio_buttons = drawAxesControls(controls_fig,viewer_fig,columns)
+    
+    #Drawing the checklist used to control the paramters
     parameter_list_checkboxes = drawParameterListControls(controls_fig,viewer_fig,columns,default_values)
+    
+    #Drawing the sliders that can be used to set paramter values
     parameter_sliders = drawParameterControls(controls_fig,viewer_fig,columns,default_values,min_values,max_values)
     
     plt.show()
